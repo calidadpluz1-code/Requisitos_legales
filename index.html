@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Requisitos Legales</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    
+    <style>
+        /* =========================================================
+            ESTILOS GENERALES
+            ========================================================= */
+        .chart-container { 
+            position: relative; 
+            height: 350px; 
+            width: 100%; 
+        }
+        
+        th, td { 
+            padding: 12px; 
+            border-bottom: 1px solid #dbeafe; 
+            vertical-align: top; 
+        }
+        
+        th { 
+            background-color: #f0f9ff; 
+            font-weight: 600; 
+            color: #1e3a8a; 
+            white-space: nowrap; 
+        }
+        
+        tr:hover { 
+            background-color: #eff6ff; 
+        }
+
+        .main-container {
+            max-width: 95%;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* =========================================================
+            ESPACIADORES PARA MANTENER ESTRUCTURA EXTENSA
+            ========================================================= */
+        .spacer-10 { height: 10px; }
+        .spacer-20 { height: 20px; }
+        .spacer-50 { height: 50px; }
+    </style>
+</head>
+
+<body class="bg-blue-50 text-blue-900 font-sans min-h-screen">
+
+    <header class="bg-blue-900 text-white shadow-md py-6 px-8 relative">
+        <div class="absolute left-6 top-6">
+            <img src="https://raw.githubusercontent.com/Pluzproject/requisitoslegales/main/Logo-SGI-Blanco-1.png" alt="Logo SGI" class="h-10 w-auto opacity-90">
+        </div>
+        <div class="flex justify-center items-center">
+            <h1 class="text-3xl font-bold tracking-tight">Portal de Requisitos Legales</h1>
+        </div>
+        <div class="absolute right-6 top-6">
+            <img src="https://raw.githubusercontent.com/Pluzproject/requisitoslegales/main/Logo%20versi%C3%B3n%20color%20blanco.png" alt="Logo Pluz" class="h-10 w-auto opacity-90">
+        </div>
+    </header>
+
+    <main class="main-container">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            
+            <div class="lg:col-span-3 space-y-8">
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-blue-900 p-6 rounded-xl text-white shadow-lg">
+                        <span class="text-xs uppercase opacity-75">Total Normas</span>
+                        <div class="text-4xl font-bold mt-2" id="kpi-total">0</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <span class="text-xs uppercase font-bold text-emerald-600">Obligatorias</span>
+                        <div class="text-3xl font-bold mt-2" id="kpi-obli">0</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <span class="text-xs uppercase font-bold text-blue-600">Informativas</span>
+                        <div class="text-3xl font-bold mt-2" id="kpi-info">0</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <span class="text-xs uppercase font-bold text-amber-600">Referenciales</span>
+                        <div class="text-3xl font-bold mt-2" id="kpi-refe">0</div>
+                    </div>
+                </div>
+
+                <div class="spacer-20"></div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-white p-5 rounded-xl border shadow-sm">
+                        <div class="chart-container"><canvas id="chartYears"></canvas></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border shadow-sm">
+                        <div class="chart-container"><canvas id="chartPillars"></canvas></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border shadow-sm">
+                        <div class="chart-container"><canvas id="chartAuthorities"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="spacer-20"></div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-blue-100 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-blue-50">
+                                <tr>
+                                    <th class="w-24">Fecha</th>
+                                    <th class="w-32">Norma</th>
+                                    <th class="w-24">Pilar</th>
+                                    <th class="w-64">Sumilla / Descripción</th>
+                                    <th class="w-32">Autoridad</th>
+                                    <th class="w-24">Tipo</th>
+                                    <th class="w-20">Enlace</th>
+                                    <th class="min-w-[400px]">Recomendación</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody" class="bg-white"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="bg-white p-6 rounded-xl border shadow-sm h-fit sticky top-6 space-y-4">
+                <div id="lastUpdateDisplay" class="text-xs text-blue-600 font-medium italic border-b pb-2 mb-2"></div>
+                <h2 class="font-bold text-blue-900 border-b pb-2">Filtros de Búsqueda</h2>
+                
+                <input type="text" id="searchInput" placeholder="Buscar norma..." class="w-full px-4 py-2 border rounded-lg text-sm">
+                
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-500">Fecha Específica</label>
+                    <input type="date" id="filterFecha" class="w-full border rounded-lg text-sm px-3 py-2">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-500">Rango de Fecha</label>
+                    <input type="date" id="filterFechaDesde" class="w-full border rounded-lg text-sm px-3 py-2" title="Desde">
+                    <input type="date" id="filterFechaHasta" class="w-full border rounded-lg text-sm px-3 py-2" title="Hasta">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-500">Periodo (Mes/Año)</label>
+                    <select id="filterMesAnio" class="w-full border rounded-lg text-sm px-3 py-2">
+                        <option value="">Seleccionar...</option>
+                    </select>
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-500">Año Específico</label>
+                    <select id="filterAnio" class="w-full border rounded-lg text-sm px-3 py-2">
+                        <option value="">Todos los Años</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-500">Categorización</label>
+                    <select id="filterPilar" class="w-full border rounded-lg text-sm px-3 py-2">
+                        <option value="">Todos los Pilares</option>
+                    </select>
+                    <select id="filterTipo" class="w-full border rounded-lg text-sm px-3 py-2">
+                        <option value="">Todos los Tipos</option>
+                    </select>
+                </div>
+                
+                <button id="btnReset" class="w-full bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-white font-bold text-sm transition">RESET FILTROS</button>
+            </aside>
+        </div>
+    </main>
+
+    <script>
+        Chart.register(ChartDataLabels);
+        
+        const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTIGndiBxp88Vdkl1NdJ4W63zLqKeotEg8_gBqUMnSz4JHef48eET9R6A265qibhQDbZUUxe5kM-n4L/pub?output=csv';
+        
+        var rawData = [];
+        var lastUpdateRawDate = ""; // Variable global para la fecha cruda
+        var charts = {};
+
+        window.addEventListener('DOMContentLoaded', function() {
+            fetchData();
+            
+            var filterIds = [
+                'searchInput', 'filterFecha', 'filterFechaDesde', 'filterFechaHasta', 
+                'filterMesAnio', 'filterAnio', 'filterPilar', 'filterTipo'
+            ];
+            
+            for(var i = 0; i < filterIds.length; i++) {
+                var element = document.getElementById(filterIds[i]);
+                if(element) {
+                    element.addEventListener('change', applyFilters);
+                    element.addEventListener('input', applyFilters);
+                }
+            }
+            
+            document.getElementById('btnReset').addEventListener('click', resetDashboard);
+        });
+
+        function fetchData() {
+            Papa.parse(csvUrl, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.data.length > 0) {
+                        // Capturamos la última fila absoluta tal cual viene
+                        lastUpdateRawDate = results.data[results.data.length - 1]['Fecha'] || "";
+                    }
+                    
+                    rawData = [];
+                    for(var i = 0; i < results.data.length; i++) {
+                        var row = results.data[i];
+                        var normaText = (row['Norma'] || '').trim().toUpperCase();
+                        
+                        if(normaText !== "" && normaText !== "SIN NOVEDAD") {
+                            var fechaOriginal = (row['Fecha'] || '');
+                            var partes = fechaOriginal.split('/');
+                            
+                            if(partes.length === 3) {
+                                var dia = partes[0].padStart(2, '0');
+                                var mes = partes[1].padStart(2, '0');
+                                var anio = partes[2];
+                                
+                                row.fEstandar = dia + '/' + mes + '/' + anio;
+                                row.rawD = anio + '-' + mes + '-' + dia;
+                                row.mesAnio = mes + '/' + anio;
+                                row.a = anio;
+                            }
+                            rawData.push(row);
+                        }
+                    }
+                    populateFilters();
+                    renderAll(rawData);
+                }
+            });
+        }
+
+        function populateFilters() {
+            function getUniqueValues(key) {
+                var values = [];
+                for(var i = 0; i < rawData.length; i++) {
+                    var val = rawData[i][key];
+                    if(val && values.indexOf(val) === -1) values.push(val);
+                }
+                return values;
+            }
+
+            function fillSelectElement(id, data, sortDesc) {
+                var select = document.getElementById(id);
+                if(sortDesc) {
+                    data.sort(function(a, b) {
+                        var p1 = a.split('/');
+                        var p2 = b.split('/');
+                        return new Date(p2[1], p2[0] - 1) - new Date(p1[1], p1[0] - 1);
+                    });
+                } else {
+                    data.sort();
+                }
+                for(var i = 0; i < data.length; i++) {
+                    var option = document.createElement('option');
+                    option.value = data[i];
+                    option.textContent = data[i];
+                    select.appendChild(option);
+                }
+            }
+
+            fillSelectElement('filterMesAnio', getUniqueValues('mesAnio'), true);
+            fillSelectElement('filterAnio', getUniqueValues('a'), false);
+            fillSelectElement('filterPilar', getUniqueValues('Pilar del SIG'), false);
+            fillSelectElement('filterTipo', getUniqueValues('Tipo de norma'), false);
+        }
+
+        function renderAll(data) {
+            var tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            var reversedData = data.slice().reverse();
+            
+            // Actualizar fecha de última actualización
+            if (lastUpdateRawDate) {
+                document.getElementById('lastUpdateDisplay').textContent = "Última act: " + lastUpdateRawDate;
+            }
+
+            for(var i = 0; i < reversedData.length; i++) {
+                var item = reversedData[i];
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td>' + (item.fEstandar || item['Fecha'] || '-') + '</td>' +
+                               '<td class="font-bold">' + (item['Norma'] || '-') + '</td>' +
+                               '<td>' + (item['Pilar del SIG'] || '-') + '</td>' +
+                               '<td class="text-xs">' + (item['Sumilla / Descripción'] || '-') + '</td>' +
+                               '<td class="text-xs">' + (item['Autoridad'] || '-') + '</td>' +
+                               '<td class="text-xs">' + (item['Tipo de norma'] || '-') + '</td>' +
+                               '<td>' + (item['Enlace'] && item['Enlace'] !== '--' ? '<a href="' + item['Enlace'] + '" target="_blank" class="text-blue-600 underline">Ver</a>' : '-') + '</td>' +
+                               '<td class="text-xs italic">' + (item['Recomendación'] || '-') + '</td>';
+                tbody.appendChild(tr);
+            }
+
+            var obli = 0, info = 0, refe = 0;
+            for(var j = 0; j < data.length; j++) {
+                var tipo = (data[j]['Tipo de norma'] || '').toUpperCase();
+                if(tipo.includes('OBLIGATORIO')) obli++;
+                else if(tipo.includes('INFORMATIVO')) info++;
+                else if(tipo.includes('REFERENCIAL')) refe++;
+            }
+            
+            document.getElementById('kpi-total').textContent = data.length;
+            document.getElementById('kpi-obli').textContent = obli;
+            document.getElementById('kpi-info').textContent = info;
+            document.getElementById('kpi-refe').textContent = refe;
+            
+            updateCharts(data);
+        }
+
+        function updateCharts(data) {
+            if(charts.chartYears) charts.chartYears.destroy();
+            if(charts.chartPillars) charts.chartPillars.destroy();
+            if(charts.chartAuthorities) charts.chartAuthorities.destroy();
+            
+            function getCounts(key) {
+                var counts = {};
+                for(var i = 0; i < data.length; i++) {
+                    var val = data[i][key] || 'N/A';
+                    counts[val] = (counts[val] || 0) + 1;
+                }
+                return counts;
+            }
+
+            // 1. Gráfico Anual (Líneas Acumuladas)
+            var currentYear = "2026";
+            var yearsSet = new Set();
+            yearsSet.add(currentYear); 
+
+            for(var i = 0; i < data.length; i++) {
+                if(data[i].a) yearsSet.add(data[i].a);
+            }
+
+            var dataSeries = {
+                'ISO 45001': {}, 'ISO 14001': {}, 'ISO 37001': {}, 'Otras Normas': {}
+            };
+
+            for(var i = 0; i < data.length; i++) {
+                var y = data[i].a;
+                if(!y) continue;
+                
+                var raw = data[i]['Pilar del SIG'] || '';
+                var p = 'Otras Normas';
+                if(raw === 'SST') p = 'ISO 45001';
+                else if(raw === 'Medio Ambiente') p = 'ISO 14001';
+                else if(raw === 'Antisoborno y Compliance') p = 'ISO 37001';
+                
+                if(!dataSeries[p][y]) dataSeries[p][y] = 0;
+                dataSeries[p][y]++;
+            }
+
+            var sortedYears = Array.from(yearsSet).sort();
+            var datasets = Object.keys(dataSeries).map(function(key) {
+                var runningTotal = 0;
+                var dataPoints = sortedYears.map(function(y) {
+                    runningTotal += (dataSeries[key][y] || 0);
+                    return runningTotal;
+                });
+                return {
+                    label: key,
+                    data: dataPoints,
+                    fill: false,
+                    tension: 0.3
+                };
+            });
+
+            charts.chartYears = new Chart(document.getElementById('chartYears'), {
+                type: 'line',
+                data: { labels: sortedYears, datasets: datasets },
+                options: { 
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: { right: 40 } },
+                    plugins: { 
+                        title: { display: true, text: 'Evolución Acumulada' },
+                        datalabels: {
+                            display: function(context) {
+                                return context.dataIndex === context.dataset.data.length - 1;
+                            },
+                            anchor: 'end',
+                            align: 'right',
+                            offset: 5,
+                            font: { weight: 'bold' }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: true } },
+                        y: { display: true, grid: { display: true } }
+                    }
+                }
+            });
+
+            // 2. Gráfico Pilares (Barras Apiladas)
+            var pData = {
+                'ISO 45001': { O: 0, I: 0, R: 0 },
+                'ISO 14001': { O: 0, I: 0, R: 0 },
+                'ISO 37001': { O: 0, I: 0, R: 0 },
+                'Otras Normas': { O: 0, I: 0, R: 0 }
+            };
+
+            for(var i = 0; i < data.length; i++) {
+                var raw = data[i]['Pilar del SIG'] || '';
+                var p = 'Otras Normas';
+                if(raw === 'SST') p = 'ISO 45001';
+                else if(raw === 'Medio Ambiente') p = 'ISO 14001';
+                else if(raw === 'Antisoborno y Compliance') p = 'ISO 37001';
+
+                var tipo = (data[i]['Tipo de norma'] || '').toUpperCase();
+                if(tipo.includes('OBLIGATORIO')) pData[p].O++;
+                else if(tipo.includes('INFORMATIVO')) pData[p].I++;
+                else if(tipo.includes('REFERENCIAL')) pData[p].R++;
+            }
+
+            charts.chartPillars = new Chart(document.getElementById('chartPillars'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(pData),
+                    datasets: [
+                        { label: 'Obligatoria', data: Object.values(pData).map(function(x){return x.O}), backgroundColor: '#fbbf24' },
+                        { label: 'Informativa', data: Object.values(pData).map(function(x){return x.I}), backgroundColor: '#818cf8' },
+                        { label: 'Referencial', data: Object.values(pData).map(function(x){return x.R}), backgroundColor: '#2dd4bf' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { x: { stacked: true }, y: { stacked: true } },
+                    plugins: { title: { display: true, text: 'Distribución por Pilares' } }
+                }
+            });
+
+            // 3. Gráfico Autoridades
+            var counts = getCounts('Autoridad');
+            var sortable = [];
+            for(var key in counts) { sortable.push([key, counts[key]]); }
+            sortable.sort(function(a, b) { return b[1] - a[1]; });
+            var top10 = sortable.slice(0, 10);
+            var others = 0;
+            for(var i = 10; i < sortable.length; i++) { others += sortable[i][1]; }
+            
+            var finalLabels = [];
+            var finalData = [];
+            for(var k = 0; k < top10.length; k++) {
+                finalLabels.push(top10[k][0]);
+                finalData.push(top10[k][1]);
+            }
+            if (others > 0) {
+                finalLabels.push('Otros');
+                finalData.push(others);
+            }
+
+            charts.chartAuthorities = new Chart(document.getElementById('chartAuthorities'), {
+                type: 'bar',
+                data: {
+                    labels: finalLabels,
+                    datasets: [{ label: 'Normas', data: finalData, backgroundColor: '#1e3a8a' }]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                    plugins: { title: { display: true, text: 'Top 10 Autoridades' }, legend: { display: false },
+                        datalabels: { color: '#ffffff', anchor: 'end', align: 'start', font: { weight: 'bold' } }
+                    },
+                    scales: { x: { beginAtZero: true, display: false, grid: { display: false } }, y: { grid: { display: false } } }
+                }
+            });
+        }
+
+        function applyFilters() {
+            var s = document.getElementById('searchInput').value.toLowerCase();
+            var d = document.getElementById('filterFecha').value;
+            var start = document.getElementById('filterFechaDesde').value;
+            var end = document.getElementById('filterFechaHasta').value;
+            var ma = document.getElementById('filterMesAnio').value;
+            var an = document.getElementById('filterAnio').value;
+            var pi = document.getElementById('filterPilar').value;
+            var ti = document.getElementById('filterTipo').value;
+
+            var filtered = [];
+            for(var i = 0; i < rawData.length; i++) {
+                var item = rawData[i];
+                var matchS = (item['Norma'].toLowerCase().includes(s) || item['Sumilla / Descripción'].toLowerCase().includes(s));
+                var matchD = (!d || item.rawD === d);
+                var matchRange = (!start || item.rawD >= start) && (!end || item.rawD <= end);
+                var matchMA = (!ma || item.mesAnio === ma);
+                var matchAN = (!an || item.a === an);
+                var matchPI = (!pi || item['Pilar del SIG'] === pi);
+                var matchTI = (!ti || item['Tipo de norma'] === ti);
+                
+                if(matchS && matchD && matchRange && matchMA && matchAN && matchPI && matchTI) {
+                    filtered.push(item);
+                }
+            }
+            renderAll(filtered);
+        }
+
+        function resetDashboard() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterFecha').value = '';
+            document.getElementById('filterFechaDesde').value = '';
+            document.getElementById('filterFechaHasta').value = '';
+            document.getElementById('filterMesAnio').value = '';
+            document.getElementById('filterAnio').value = '';
+            document.getElementById('filterPilar').value = '';
+            document.getElementById('filterTipo').value = '';
+            renderAll(rawData);
+        }
+    </script>
+</body>
+</html>
